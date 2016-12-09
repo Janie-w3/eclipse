@@ -4,7 +4,8 @@
 <!-- http://bl.ocks.org/mbostock/1095795 -->
 <html>
 <head>
-<title>wave.io</title>	
+<title>Visualization | wave.io</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 <style>
 	.node {
 		stroke: #fff;
@@ -19,25 +20,42 @@
 
 	.link {
 		fill: none;
-		stroke: #bbb;
+		stroke: #fff;
         stroke-dasharray: 5, 5, 5, 5, 5, 5;
 	}
+
+    .list-group-item:first-child, .list-group-item:last-child {
+        border-radius: 0;
+    }
+
+    body {
+        background-color: #aaa;
+    }
 	
 	/* svg { border: 1px solid #999; } */
 </style>
 <!--<script src="https://d3js.org/d3.v4.min.js"></script>-->
-<!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>-->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 <script src="https://d3js.org/d3.v3.min.js"></script>
 <script src="js/d3.legend.js"></script>
 </head>
 <body>
-<svg id="nodearea" width="960" height="600"></svg> <br/>
+<div class="row" style="margin-right: 0; margin-left: 0">
+	<div class="col-md-8">
+		<svg id="nodearea" height="900" width="1000"></svg>
 
-<div style="display: none;">
-	<button id="addNode" onClick="add_node();">Add Node</button>
-	<button id="removeNode" onClick="remove_node();">Delete Node</button>
-	<button id="addLink" onClick="add_link();">Add Link</button>
-	<button id="removeLink" onClick="remove_link();">Delete Link</button>
+		<div style="display: none;">
+			<button id="addNode" onClick="add_node();">Add Node</button>
+			<button id="removeNode" onClick="remove_node();">Delete Node</button>
+			<button id="addLink" onClick="add_link();">Add Link</button>
+			<button id="removeLink" onClick="remove_link();">Delete Link</button>
+		</div>
+	</div>
+	<div class="col-md-4" style="overflow: auto; padding-right: 0;">
+		<ul class="list-group" id="event">
+			<li class="list-group-item">Community Network Activated</li>
+		</ul>
+	</div>
 </div>
 
 <script>
@@ -72,7 +90,10 @@ function start() {
   node.append("text").attr("dx", 12).attr("dy", ".35em").text("test")
   node.exit().remove();
 
-  link = link.data(force.links(), function(d) { return d.source.id + "-" + d.target.id; });
+
+  link = link.data(force.links(), function(d) {
+      return d.source.id + "-" + d.target.id;
+  });
   link.enter().insert("line", ".node").attr("class", "link");
   link.exit().remove();
 
@@ -92,7 +113,10 @@ function tick() {
 
 function add_node()
 {
-	var a = {id: nodes.length };
+    var roles = ['Master', 'Client', 'Router'];
+    var rand_item = Math.floor( getRandomNumber(1, 3) );
+
+	var a = {id: nodes.length, role: roles[rand_item] };
 	nodes.push(a);
 
 	start();
@@ -108,8 +132,17 @@ function add_link()
 {
 	var s = Math.floor(Math.random() * nodes.length);
 	var t = Math.floor(Math.random() * nodes.length);
-	links.push({"source": nodes[s], "target": nodes[t]});
-	start();
+
+    var node1_role = nodes[s].role;
+    var node2_role = nodes[s].role;
+
+    if( ( node1_role != 'Master' && node2_role != 'Master' ) || ( node1_role != 'Router' && node2_role != 'Router' ) )
+    {
+        links.push({"source": nodes[s], "target": nodes[t]});
+        start();
+        $('#event').prepend('<li class="list-group-item text-success">New connection established between two nodes</li>');
+        $(window).scrollTop(0);
+    }
 }
 
 function remove_link()
@@ -217,8 +250,10 @@ function refresh_source()
 
 
 	function autoEvent() {
-		var item = Math.floor(getRandomNumber(1, 4));
-		console.log(item);
+		var item = Math.floor(getRandomNumber(1, 4)),
+			event_obj = $('#event');
+
+		//console.log(nodes);
 
 		switch ( item )
 		{
@@ -228,16 +263,22 @@ function refresh_source()
 
 			case 2:
 				add_node();
+                add_link();
+				event_obj.prepend('<li class="list-group-item text-success">New node is is appeared to the community</li>');
 				break;
 
 			case 3:
-				add_link();
+				remove_link();
+				event_obj.prepend('<li class="list-group-item text-danger">Connection is dropped between two nodes</li>');
 				break;
 
 			case 4:
-				remove_link();
+				remove_node();
+				event_obj.prepend('<li class="list-group-item text-danger">A node is dropped from the community</li>');
 				break;
 		}
+
+        $(window).scrollTop(0);
 	}
 
 	function getRandomNumber(min, max) {
